@@ -1,10 +1,18 @@
+/*
+    Naive implementation of a singly linked list.
+    No ability to peek() at the next element.
+*/
+
 use std::mem;
 
 pub struct List {
     head: Link,
 }
 
-type Link = Option<Box<Node>>;
+enum Link {
+    Empty,
+    More(Box<Node>),
+}
 
 struct Node {
     elem: i32,
@@ -13,22 +21,22 @@ struct Node {
 
 impl List {
     pub fn new() -> Self {
-        List { head: Link::None }
+        List { head: Link::Empty }
     }
 
     pub fn push(&mut self, elem: i32) {
         let new_node = Box::new(Node {
             elem: elem,
-            next: mem::replace(&mut self.head, None),
+            next: mem::replace(&mut self.head, Link::Empty),
         });
 
-        self.head = Link::Some(new_node);
+        self.head = Link::More(new_node);
     }
 
     pub fn pop(&mut self) -> Option<i32> {
-        match mem::replace(&mut self.head, None) {
-            Link::None => None,
-            Link::Some(node) => {
+        match mem::replace(&mut self.head, Link::Empty) {
+            Link::Empty => None,
+            Link::More(node) => {
                 self.head = node.next;
                 Some(node.elem)
             }
@@ -38,12 +46,9 @@ impl List {
 
 impl Drop for List {
     fn drop(&mut self) {
-        let mut cur_link = mem::replace(&mut self.head, None);
-        while let Link::Some(mut boxed_node) = cur_link {
-            cur_link = mem::replace(&mut boxed_node.next, None);
-            // boxed_node goes out of scope and gets dropped here;
-            // but its Node's `next` field has been set to Link::Empty
-            // so no unbounded recursion occurs.
+        let mut cur_link = mem::replace(&mut self.head, Link::Empty);
+        while let Link::More(mut boxed_node) = cur_link {
+            cur_link = mem::replace(&mut boxed_node.next, Link::Empty);
         }
     }
 }
